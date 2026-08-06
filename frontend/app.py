@@ -10,7 +10,13 @@ import plotly.express as px
 import requests
 import streamlit as st
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+def _get_secret(key: str, default: str) -> str:
+    """Lê de st.secrets (Streamlit Cloud) com fallback para os.getenv (Docker local)."""
+    try:
+        return st.secrets[key]
+    except Exception:
+        return os.getenv(key, default)
+
 
 st.set_page_config(
     page_title="GEFIN Agent",
@@ -18,6 +24,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+BACKEND_URL = _get_secret("BACKEND_URL", "http://localhost:8000")
 
 st.title("GEFIN Agent")
 st.caption("Agentic Analytics · Contas a Receber · Protótipo local com governança e linhagem")
