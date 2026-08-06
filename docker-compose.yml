@@ -43,12 +43,13 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: gefin-backend
     env_file:
       - .env
     environment:
+      APP_ENV: development
       DATABASE_URL: postgresql://gefin:gefin@db:5432/gefin
       CATALOG_PATH: /app/catalog/metrics.yaml
       LOG_LEVEL: INFO

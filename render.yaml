@@ -1,0 +1,30 @@
+services:
+  - name: gefin-backend
+    type: web
+    runtime: docker
+    plan: free
+    dockerfilePath: backend/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: DATABASE_URL
+        sync: false
+      - key: CATALOG_PATH
+        value: /app/catalog/metrics.yaml
+      - key: LLM_PROVIDER
+        value: anthropic
+      - key: LLM_MODEL
+        value: claude-sonnet-4-20250514
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: LOG_LEVEL
+        value: INFO
+      - key: MAX_AGENT_STEPS
+        value: "6"
+      - key: SQL_ROW_LIMIT
+        value: "500"
+      - key: SQL_TIMEOUT_SECONDS
+        value: "30"
