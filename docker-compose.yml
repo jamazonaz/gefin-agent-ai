@@ -1,0 +1,109 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: gefin-db
+    environment:
+      POSTGRES_USER: gefin
+      POSTGRES_PASSWORD: gefin
+      POSTGRES_DB: gefin
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gefin -d gefin"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - gefin-net
+
+  # Optional — only needed when LLM_PROVIDER=ollama
+  # Comment out this service (and the depends_on below) if you use Claude/OpenAI
+  ollama:
+    image: ollama/ollama:latest
+    container_name: gefin-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - gefin-net
+    profiles:
+      - ollama
+    # Uncomment if you have NVIDIA GPU:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gefin-backend
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://gefin:gefin@db:5432/gefin
+      CATALOG_PATH: /app/catalog/metrics.yaml
+      LOG_LEVEL: INFO
+      # LLM settings come from .env (LLM_PROVIDER, LLM_MODEL, ANTHROPIC_API_KEY, etc.)
+      # Fallback defaults if .env is missing:
+      LLM_PROVIDER: ${LLM_PROVIDER:-anthropic}
+      LLM_MODEL: ${LLM_MODEL:-claude-sonnet-4-20250514}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./catalog:/app/catalog:ro
+      - ./backend/app:/app/app
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - gefin-net
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gefin-frontend
+    environment:
+      BACKEND_URL: http://backend:8000
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./frontend:/app
+    depends_on:
+      - backend
+    networks:
+      - gefin-net
+    restart: unless-stopped
+
+  # Optional: easy DB exploration
+  adminer:
+    image: adminer:latest
+    container_name: gefin-adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    networks:
+      - gefin-net
+
+volumes:
+  pgdata:
+  ollama_data:
+
+networks:
+  gefin-net:
+    driver: bridge

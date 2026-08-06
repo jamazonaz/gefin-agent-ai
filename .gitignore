@@ -1,0 +1,14 @@
+.env
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.idea/
+.vscode/
+*.log
+.DS_Store
+pgdata/
+ollama_data/
+.streamlit/secrets.toml
+.claude/settings.local.json

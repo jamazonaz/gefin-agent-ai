@@ -1,0 +1,135 @@
+# GEFIN Agent - Lightweight Semantic Catalog
+# The agent MUST consult this catalog before generating complex SQL.
+
+version: "1.0"
+domain: contas_a_receber
+
+metrics:
+  - id: total_open_ar
+    name: "Saldo Total em Aberto"
+    description: "Soma do valor em aberto de todas as faturas ainda não pagas (status open)."
+    view: vw_ar_open_items
+    expression: "SUM(amount_open)"
+    unit: "BRL"
+    examples:
+      - "Qual o saldo total em aberto?"
+      - "Quanto temos a receber no total?"
+      - "Saldo em aberto atual"
+
+  - id: open_invoices_count
+    name: "Quantidade de Faturas em Aberto"
+    description: "Número de faturas com saldo em aberto maior que zero."
+    view: vw_ar_open_items
+    expression: "COUNT(*)"
+    examples:
+      - "Quantas faturas estão em aberto?"
+      - "Número de títulos a receber"
+
+  - id: aging_buckets
+    name: "Aging de Contas a Receber"
+    description: "Distribuição do saldo em aberto por faixa de atraso (0-30, 31-60, 61-90, 90+ dias)."
+    view: vw_ar_aging
+    examples:
+      - "Mostre o aging"
+      - "Como está a carteira por dias de atraso?"
+      - "Aging por faixa"
+
+  - id: dso
+    name: "DSO (Days Sales Outstanding)"
+    description: "Indicador médio de dias que as faturas ficam em aberto. Calculado sobre o período recente."
+    view: vw_ar_dso
+    expression: "dso_days"
+    unit: "dias"
+    examples:
+      - "Qual o DSO atual?"
+      - "Days sales outstanding"
+
+  - id: customer_open_balance
+    name: "Saldo em Aberto por Cliente"
+    description: "Saldo total em aberto agrupado por cliente."
+    view: vw_ar_customer_summary
+    examples:
+      - "Saldo em aberto por cliente"
+      - "Top clientes com maior saldo a receber"
+      - "Quais clientes devem mais?"
+
+  - id: open_ar_trend
+    name: "Tendência de Saldo em Aberto"
+    description: "Série temporal diária do saldo em aberto (útil para gráficos de linha)."
+    view: vw_ar_kpi_daily
+    examples:
+      - "Evolução do saldo em aberto"
+      - "Tendência de contas a receber nos últimos 90 dias"
+      - "Gráfico de saldo em aberto ao longo do tempo"
+
+dimensions:
+  - id: customer
+    name: "Cliente"
+    description: "Cliente / devedor"
+    view: vw_ar_customer_summary
+    column: customer_name
+
+  - id: aging_bucket
+    name: "Faixa de Aging"
+    description: "Faixa de dias de atraso"
+    view: vw_ar_aging
+    column: aging_bucket
+
+  - id: region
+    name: "Região"
+    description: "Região do cliente"
+    view: vw_ar_customer_summary
+    column: region
+
+  - id: segment
+    name: "Segmento"
+    description: "Segmento de negócio do cliente"
+    view: vw_ar_customer_summary
+    column: segment
+
+views:
+  - name: vw_ar_open_items
+    description: "Itens individuais de faturas em aberto com dias de atraso calculados."
+    columns:
+      - invoice_id
+      - customer_id
+      - customer_name
+      - issue_date
+      - due_date
+      - amount_original
+      - amount_open
+      - days_overdue
+      - status
+
+  - name: vw_ar_aging
+    description: "Resumo do saldo em aberto agrupado por faixa de aging."
+    columns:
+      - aging_bucket
+      - amount_open
+      - invoice_count
+
+  - name: vw_ar_customer_summary
+    description: "Resumo de saldo e quantidade de faturas por cliente."
+    columns:
+      - customer_id
+      - customer_name
+      - region
+      - segment
+      - amount_open
+      - invoice_count
+      - avg_days_overdue
+
+  - name: vw_ar_kpi_daily
+    description: "Série diária de saldo em aberto (para tendências)."
+    columns:
+      - snapshot_date
+      - amount_open
+      - invoice_count
+
+  - name: vw_ar_dso
+    description: "DSO calculado (visão simplificada para o MVP)."
+    columns:
+      - as_of_date
+      - dso_days
+      - total_open
+      - avg_daily_sales
