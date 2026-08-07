@@ -23,6 +23,7 @@ logger = logging.getLogger("gefin.tools")
 
 SQL_ROW_LIMIT = int(os.getenv("SQL_ROW_LIMIT", "500"))
 ALLOWED_VIEWS = list_allowed_views()
+DEPLOYMENT_ENV = os.getenv("DEPLOYMENT_ENV", "local")
 
 
 def _is_safe_select(sql: str) -> tuple[bool, str]:
@@ -184,7 +185,7 @@ def get_lineage(views_used: list[str], sql: str | None = None) -> dict[str, Any]
         )
 
     return {
-        "source_system": "PostgreSQL (local prototype)",
+        "source_system": f"PostgreSQL ({DEPLOYMENT_ENV})",
         "layer": "semantic_views",
         "views": lineage_views,
         "sql": sql,

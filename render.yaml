@@ -12,6 +12,8 @@ services:
         value: 8000
       - key: DATABASE_URL
         sync: false
+      - key: DEPLOYMENT_ENV
+        value: production
       - key: CATALOG_PATH
         value: /app/catalog/metrics.yaml
       - key: LLM_PROVIDER
