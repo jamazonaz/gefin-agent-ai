@@ -1,0 +1,10 @@
+# Pins aplicados apenas ao build Docker local (python:3.12-slim), não ao
+# Streamlit Community Cloud (que le apenas requirements.txt e roda em uma
+# versao de Python diferente/mais recente, com seu proprio conjunto de
+# wheels disponiveis).
+#
+# numpy/pyarrow sem pin no requirements.txt fizeram o pip puxar versoes
+# recentes demais para o streamlit==1.41.1 no Docker local, causando um
+# segfault (SIGSEGV / exit 139) na serializacao Arrow do st.dataframe.
+numpy==1.26.4
+pyarrow==17.0.0
