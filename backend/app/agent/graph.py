@@ -21,8 +21,8 @@ from typing import Any
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 
 from app.agent.memory import append_message, get_history
-from app.agent.prompts import SYSTEM_PROMPT
-from app.agent.tools import ALL_TOOLS
+from app.agent.prompts import SYSTEM_PROMPT, TRIAGE_SYSTEM_PROMPT
+from app.agent.tools import ALL_TOOLS, triage_scope
 
 logger = logging.getLogger("gefin.agent")
 
@@ -32,6 +32,17 @@ LLM_MODEL = os.getenv("LLM_MODEL", "qwen2.5:14b")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 LLM_TIMEOUT_SECONDS = int(os.getenv("LLM_TIMEOUT_SECONDS", "45"))
 LLM_MAX_RETRIES = int(os.getenv("LLM_MAX_RETRIES", "1"))
+
+# Providers whose LangChain integration supports forcing a specific tool via
+# tool_choice. Ollama's support varies by model, so it falls back to the
+# prompt-only guardrail in SYSTEM_PROMPT instead of a forced triage call.
+TOOL_CHOICE_FORCING_PROVIDERS = {"anthropic", "openai"}
+
+OUT_OF_SCOPE_ANSWER = (
+    "Desculpe, mas sou especializado apenas em Contas a Receber{reason_clause}. "
+    'Experimente perguntar, por exemplo: "Qual o saldo total em aberto?" ou '
+    '"Mostre o aging por faixa de atraso".'
+)
 
 
 def _build_llm():
@@ -85,10 +96,39 @@ async def run_agent(user_message: str, session_id: str) -> dict[str, Any]:
     """
     start = time.time()
     llm = _build_llm()
+    history = get_history(session_id)
+    steps: list[str] = []
+
+    if LLM_PROVIDER in TOOL_CHOICE_FORCING_PROVIDERS:
+        triage_messages: list = [SystemMessage(content=TRIAGE_SYSTEM_PROMPT)]
+        for h in history[-2:]:
+            role = HumanMessage if h["role"] == "user" else AIMessage
+            triage_messages.append(role(content=h["content"]))
+        triage_messages.append(HumanMessage(content=user_message))
+
+        try:
+            triage_llm = llm.bind_tools([triage_scope], tool_choice="triage_scope")
+            triage_response: AIMessage = await triage_llm.ainvoke(triage_messages)
+            if triage_response.tool_calls:
+                triage_args = triage_response.tool_calls[0]["args"]
+                if not triage_args.get("in_scope", True):
+                    reason = (triage_args.get("reason") or "").strip()
+                    reason_clause = f" e não posso ajudar com esse assunto ({reason})" if reason else ""
+                    answer = OUT_OF_SCOPE_ANSWER.format(reason_clause=reason_clause)
+                    append_message(session_id, "user", user_message)
+                    append_message(session_id, "assistant", answer)
+                    return {
+                        "answer": answer,
+                        "steps": ["triage:out_of_scope"],
+                        "latency_ms": int((time.time() - start) * 1000),
+                    }
+                steps.append("triage:in_scope")
+        except Exception:
+            logger.exception("Triage call failed; falling back to prompt-only guardrail")
+
     llm_with_tools = llm.bind_tools(ALL_TOOLS)
     tools_by_name = {t.name: t for t in ALL_TOOLS}
 
-    history = get_history(session_id)
     messages: list = [SystemMessage(content=SYSTEM_PROMPT)]
 
     for h in history[-6:]:
@@ -100,7 +140,6 @@ async def run_agent(user_message: str, session_id: str) -> dict[str, Any]:
     messages.append(HumanMessage(content=user_message))
     append_message(session_id, "user", user_message)
 
-    steps: list[str] = []
     tools_called: list[dict] = []
     final_sql: str | None = None
     data: list[dict] | None = None
