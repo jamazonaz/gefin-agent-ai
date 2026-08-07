@@ -7,7 +7,7 @@ domain: contas_a_receber
 metrics:
   - id: total_open_ar
     name: "Saldo Total em Aberto"
-    description: "Soma do valor em aberto de todas as faturas ainda não pagas (status open)."
+    description: "Soma do valor em aberto de todas as faturas ainda não quitadas. A view vw_ar_open_items já inclui faturas com status 'open' e 'partial' (ambas têm saldo residual > 0) — NÃO adicione um filtro extra WHERE status = 'open', isso excluiria as faturas parcialmente pagas e subestimaria o saldo total."
     view: vw_ar_open_items
     expression: "SUM(amount_open)"
     unit: "BRL"
@@ -100,6 +100,7 @@ views:
       - amount_open
       - days_overdue
       - status
+    warning: "Já filtra apenas status IN ('open', 'partial') com amount_open > 0 — não adicione WHERE status = 'open' por conta própria, isso excluiria faturas parcialmente pagas que ainda têm saldo residual."
 
   - name: vw_ar_aging
     description: "Resumo do saldo em aberto agrupado por faixa de aging."
@@ -125,6 +126,7 @@ views:
       - snapshot_date
       - amount_open
       - invoice_count
+    warning: "Uma linha por dia (série temporal), não uma linha por fatura/cliente. NUNCA some amount_open entre linhas para obter o saldo total — isso soma o mesmo saldo repetido em ~90 dias diferentes, gerando um valor sem sentido. Para o saldo atual, use a métrica total_open_ar (view vw_ar_open_items) ou filtre esta view por snapshot_date = MAX(snapshot_date)."
 
   - name: vw_ar_dso
     description: "DSO calculado (visão simplificada para o MVP)."

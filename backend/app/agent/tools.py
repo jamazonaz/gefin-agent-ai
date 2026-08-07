@@ -79,6 +79,8 @@ def get_metric_definition(metric_id: str) -> dict[str, Any]:
     view_info = get_view_info(m.get("view", ""))
     if view_info:
         result["view_columns"] = view_info.get("columns", [])
+        if view_info.get("warning"):
+            result["view_warning"] = view_info["warning"]
     return result
 
 
