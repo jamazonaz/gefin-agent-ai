@@ -39,7 +39,7 @@ if "messages" not in st.session_state:
 
 def call_chat(message: str) -> dict[str, Any]:
     payload = {"message": message, "session_id": st.session_state.session_id}
-    r = requests.post(f"{BACKEND_URL}/chat", json=payload, timeout=120)
+    r = requests.post(f"{BACKEND_URL}/chat", json=payload, timeout=180)
     r.raise_for_status()
     return r.json()
 

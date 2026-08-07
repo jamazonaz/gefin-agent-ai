@@ -30,6 +30,8 @@ MAX_STEPS = int(os.getenv("MAX_AGENT_STEPS", "6"))
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama").lower()
 LLM_MODEL = os.getenv("LLM_MODEL", "qwen2.5:14b")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+LLM_TIMEOUT_SECONDS = int(os.getenv("LLM_TIMEOUT_SECONDS", "45"))
+LLM_MAX_RETRIES = int(os.getenv("LLM_MAX_RETRIES", "1"))
 
 
 def _build_llm():
@@ -42,6 +44,8 @@ def _build_llm():
             temperature=0.1,
             api_key=os.getenv("ANTHROPIC_API_KEY"),
             max_tokens=4096,
+            timeout=LLM_TIMEOUT_SECONDS,
+            max_retries=LLM_MAX_RETRIES,
         )
 
     if LLM_PROVIDER == "openai":
@@ -52,6 +56,8 @@ def _build_llm():
             temperature=0.1,
             api_key=os.getenv("OPENAI_API_KEY"),
             base_url=os.getenv("OPENAI_BASE_URL") or None,
+            timeout=LLM_TIMEOUT_SECONDS,
+            max_retries=LLM_MAX_RETRIES,
         )
 
     # Default: Ollama (local)
@@ -61,6 +67,7 @@ def _build_llm():
         model=LLM_MODEL,
         base_url=OLLAMA_BASE_URL,
         temperature=0.1,
+        timeout=LLM_TIMEOUT_SECONDS,
     )
 
 
