@@ -46,6 +46,7 @@ def get_catalog_summary() -> dict[str, Any]:
                 "name": v["name"],
                 "description": v.get("description"),
                 "columns": v.get("columns", []),
+                **({"warning": v["warning"]} if v.get("warning") else {}),
             }
             for v in cat.get("views", [])
         ],
