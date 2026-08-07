@@ -190,6 +190,19 @@ def get_lineage(views_used: list[str], sql: str | None = None) -> dict[str, Any]
     }
 
 
+@tool
+def triage_scope(in_scope: bool, reason: str) -> dict[str, Any]:
+    """
+    Classifica se a pergunta do usuário pertence ao domínio de Contas a Receber
+    coberto pelo catálogo semântico do GEFIN (saldo em aberto, aging, DSO,
+    faturas, clientes devedores, tendências de contas a receber).
+    Chame com in_scope=False para qualquer outro assunto (notícias, política,
+    cultura geral, outros domínios de negócio, receitas, manutenção, etc.),
+    mesmo que você saiba a resposta.
+    """
+    return {"in_scope": in_scope, "reason": reason}
+
+
 # Export list for the agent
 ALL_TOOLS = [
     list_metrics,
