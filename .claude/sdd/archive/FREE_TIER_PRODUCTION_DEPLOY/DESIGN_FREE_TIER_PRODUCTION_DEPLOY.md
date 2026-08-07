@@ -10,7 +10,7 @@
 | **Date** | 2026-08-06 |
 | **Author** | design-agent |
 | **DEFINE** | [DEFINE_FREE_TIER_PRODUCTION_DEPLOY.md](./DEFINE_FREE_TIER_PRODUCTION_DEPLOY.md) |
-| **Status** | ✅ Complete (Built) |
+| **Status** | ✅ Shipped |
 
 **Confiança do Design:** 0.80 — nenhum domínio do KB cobre Render/Neon/Streamlit Community Cloud e nenhum agente especialista é específico dessas plataformas (confirmado no Define). Todos os fatos de plataforma abaixo (sintaxe do `render.yaml`, comportamento do free tier, formato da connection string do Neon, deploy de subdiretório no Streamlit Cloud) foram verificados na documentação oficial nesta fase, em vez de assumidos.
 
@@ -411,9 +411,10 @@ Não aplicável — a migração Neon é uma execução única via script (`db/m
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-08-06 | design-agent | Initial version |
+| 1.1 | 2026-08-07 | ship-agent | Shipped and archived |
 
 ---
 
 ## Next Step
 
-**Ready for:** `/ship .claude/sdd/features/DEFINE_FREE_TIER_PRODUCTION_DEPLOY.md`
+**Ready for:** Shipped — see `SHIPPED_2026-08-07.md` neste mesmo diretório.
