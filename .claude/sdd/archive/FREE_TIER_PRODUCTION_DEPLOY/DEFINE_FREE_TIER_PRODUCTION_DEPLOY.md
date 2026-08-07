@@ -9,7 +9,7 @@
 | **Feature** | FREE_TIER_PRODUCTION_DEPLOY |
 | **Date** | 2026-08-06 |
 | **Author** | jamazonaz (via define-agent) |
-| **Status** | ✅ Complete (Built) |
+| **Status** | ✅ Shipped |
 | **Clarity Score** | 14/15 |
 
 ---
@@ -181,9 +181,10 @@ None - ready for Design.
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-08-06 | define-agent | Initial version |
+| 1.1 | 2026-08-07 | ship-agent | Shipped and archived |
 
 ---
 
 ## Next Step
 
-**Ready for:** `/ship .claude/sdd/features/DEFINE_FREE_TIER_PRODUCTION_DEPLOY.md`
+**Ready for:** Shipped — see `SHIPPED_2026-08-07.md` neste mesmo diretório.
