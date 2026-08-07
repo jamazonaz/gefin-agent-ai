@@ -160,16 +160,34 @@ Nenhum. O build não teve blockers — apenas 1 issue corrigida durante a verifi
 
 ## Acceptance Test Verification
 
-> AT-001, AT-002 e AT-004 do DEFINE dependem de infraestrutura de produção real (conta no Render, no Neon e no Streamlit Community Cloud), que este Build não cria — o File Manifest do DESIGN cobre apenas os artefatos de repositório necessários para o deploy, não a execução do deploy em si. Abaixo: status real de cada AT nesta fase, com o equivalente local usado como evidência onde a infraestrutura de produção ainda não existe.
+> Atualizado após a execução real do deploy (Neon + Render + Streamlit Community Cloud), fora do escopo de arquivos do Build original mas conduzida na sequência como continuação direta da feature.
 
 | ID | Scenario | Status | Evidence |
 |----|----------|--------|----------|
-| AT-001 | Happy path (pergunta real na UI pública) | ⏳ Pending (requer deploy real) | Equivalente local: `AppTest` completo (chat_input → resposta → render) passou sem exceção; `POST /chat` no stack local retornou resposta correta com linhagem |
-| AT-002 | Cold start do backend | ⏳ Pending (requer deploy real no Render) | Não simulável localmente (Render é quem controla o spin-down); documentado em `docs/DEPLOYMENT.md` seção "Limitações conhecidas" |
-| AT-003 | Sem segredos expostos | ✅ Pass | `grep` por padrões `sk-`/`AKIA`/`PRIVATE KEY` em todos os 7 arquivos criados/modificados — nenhum encontrado; `DATABASE_URL`/`ANTHROPIC_API_KEY` marcados `sync: false` no `render.yaml` |
-| AT-004 | Paridade de dados no Neon | ⏳ Pending (requer execução do `db/migrate_to_neon.sh` contra um Neon real) | Script criado e validado sintaticamente (`bash -n`); lógica idêntica à migração já testada manualmente no ambiente local (40/793/357 confirmados na sessão anterior) |
+| AT-001 | Happy path (pergunta real na UI pública) | ✅ Pass | Testado via `curl` direto no backend público (`gefin-backend.onrender.com/chat`) e via UI real do Streamlit Community Cloud (`gefin-agent-ai-dev.streamlit.app`) — resposta correta com linhagem, confirmada pelo usuário |
+| AT-002 | Cold start do backend | ⏳ Não testado explicitamente | Comportamento documentado em `docs/DEPLOYMENT.md` (~1 min após 15 min ocioso, spinner do frontend cobre a espera); não foi feito um teste dedicado aguardando o spin-down real nesta sessão |
+| AT-003 | Sem segredos expostos | ✅ Pass | Varredura original (7 arquivos) + todos os PRs subsequentes sem nenhuma chave/credencial commitada |
+| AT-004 | Paridade de dados no Neon | ✅ Pass | `db/migrate_to_neon.sh` executado contra o Neon real via `psql` (dentro do container `gefin-db`, já que o host não tinha `psql`); 40 clientes / 793 invoices / 372 payments (contagem varia por ser dado gerado com `random()`); 5 views confirmadas presentes e funcionais |
 
-**Nota:** AT-001, AT-002 e AT-004 devem ser reexecutados manualmente, seguindo `docs/DEPLOYMENT.md`, assim que as contas Render/Neon/Streamlit Cloud existirem. Isso é trabalho de execução operacional (fora do escopo de arquivos deste Build), não uma lacuna de código.
+---
+
+## Post-Deploy Hardening (Execução Real em Produção)
+
+> Problemas encontrados e corrigidos durante a execução real do deploy — cada um virou um commit + PR próprio, mesclado em `master` via o fluxo estabelecido (branch `develop` protegida por PR, sem push direto).
+
+| # | Problema | Causa Raiz | Correção | Evidência |
+|---|----------|------------|----------|-----------|
+| 1 | Build do frontend falhava no Streamlit Community Cloud (`ModuleNotFoundError: pkg_resources` ao compilar `pyarrow`) | `pyarrow==17.0.0` (pin usado pra evitar segfault local) não tem wheel para o Python 3.14 do Streamlit Cloud — tenta compilar da fonte e falha | `numpy`/`pyarrow` movidos de `frontend/requirements.txt` para `frontend/constraints-docker.txt`, aplicado só no build Docker local via `pip install -c` | Build local confirmado com as mesmas versões; deploy no Streamlit Cloud voltou a funcionar |
+| 2 | Build no Streamlit Cloud travava >20min sem erro | Mesma causa do #1, mas para `pandas==2.2.3` (compilação Cython muito mais lenta que falhar rápido) | `pandas` também movido para `constraints-docker.txt`, sem pin em `requirements.txt` | App voltou a subir no Streamlit Cloud em minutos |
+| 3 | `/chat` travava 170s+ sem resposta nenhuma (timeout cru no frontend) | `ChatAnthropic`/`ChatOpenAI`/`ChatOllama` sem `timeout` configurado — SDK usa default de vários minutos | `LLM_TIMEOUT_SECONDS` (45s) e `LLM_MAX_RETRIES` (1) adicionados aos 3 providers; timeout do frontend subiu de 120s→180s | Testado contra a API da OpenAI direto e contra o backend local/Neon: query no banco (2.8s) não era o gargalo; fluxo completo de 6 passos com dataset de 90 dias genuinamente leva 50-100s — timeout final calibrado com base nisso, não em suposição |
+| 4 | Agente respondia perguntas fora do domínio (ex.: "quem é presidente do Brasil?") | `SYSTEM_PROMPT` definia a identidade mas nunca instruía a recusar assuntos fora de escopo | Bloco `ESCOPO` adicionado ao `SYSTEM_PROMPT` | Testado com 2 perguntas fora de escopo — ambas recusadas corretamente, sem regressão nas dentro de escopo |
+| 5 | Guardrail de prompt é uma restrição fraca (depende do modelo obedecer texto livre) | Sem segunda camada de defesa | Tool `triage_scope` forçada via `tool_choice` (Anthropic/OpenAI) — decisão estruturada `{in_scope, reason}` obrigatória antes do loop principal | Fora de escopo: recusa em ~3s (vs. rodar o loop completo antes). Ollama mantém só o guardrail de prompt (tool_choice forcing não confiável para modelos locais arbitrários) |
+| 6 | `SUM(amount_open)` em `vw_ar_kpi_daily` retornava R$ 875M em vez de ~R$ 10M | View é uma série temporal (1 linha/dia); somar todas as linhas soma o mesmo saldo repetido ~90 vezes | Campo `warning` adicionado à view no catálogo, propagado por `list_metrics`/`get_metric_definition`, instruindo a filtrar por `snapshot_date = MAX(...)` | Confirmado direto no Neon (`SUM` = 875.356.484,70); reperguntado após a correção — agente passou a filtrar pela data mais recente corretamente |
+| 7 | Saldo divergia entre `vw_ar_open_items` (com filtro extra `status='open'`) e as views derivadas dela | Descrição da métrica `total_open_ar` no catálogo dizia "(status open)", levando o agente a filtrar demais e excluir faturas `partial` com saldo residual | Descrição da métrica reescrita; `warning` adicionado à view `vw_ar_open_items` | Confirmado no Neon: filtro extra excluía R$ 533.856,26 (48 faturas partial); após a correção as 3 views batem exatamente |
+| 8 | Linhagem sempre dizia `"PostgreSQL (local prototype)"`, mesmo em produção (dados vindo do Neon) | Texto hardcoded em `get_lineage()` | Variável `DEPLOYMENT_ENV` (default `local`, `production` no Render) usada para montar o texto dinamicamente | Confirmado em produção: `"source_system":"PostgreSQL (production)"` |
+| 9 | Guardrail (item 5) recusava "qual o catálogo?" como fora de escopo — funcionava antes da correção de guardrails | `TRIAGE_SYSTEM_PROMPT` definia escopo só como métricas específicas, sem cobrir perguntas meta sobre o próprio sistema | Escopo ampliado explicitamente em `TRIAGE_SYSTEM_PROMPT` e `SYSTEM_PROMPT` para incluir perguntas sobre o catálogo/capacidades | Reperguntado "qual o catalogo?" — respondeu com o catálogo completo; regressão checada (fora de escopo continua recusando) |
+
+**Todos os 9 itens** verificados em produção real (Render + Neon + Streamlit Community Cloud), não apenas localmente.
 
 ---
 
@@ -180,10 +198,10 @@ Nenhum. O build não teve blockers — apenas 1 issue corrigida durante a verifi
 **Completion Checklist:**
 
 - [x] All tasks from manifest completed (7/7)
-- [x] All verification checks pass (após 1 correção)
-- [x] All tests pass (AppTest, build Docker, smoke E2E local, varredura de segredos)
+- [x] All verification checks pass (após 1 correção no Build + 9 correções no hardening pós-deploy)
+- [x] All tests pass (AppTest, build Docker, smoke E2E local, smoke E2E produção, varredura de segredos)
 - [x] No blocking issues
-- [x] Acceptance tests verified — AT-003 verificado agora; AT-001/002/004 dependem de deploy real (documentado, não bloqueante para o código)
+- [x] Acceptance tests verified — AT-001/003/004 com evidência de produção real; AT-002 documentado mas não testado explicitamente (spin-down do Render não foi aguardado nesta sessão)
 - [x] Ready for /ship
 
 ---
@@ -191,5 +209,3 @@ Nenhum. O build não teve blockers — apenas 1 issue corrigida durante a verifi
 ## Next Step
 
 **If Complete:** `/ship .claude/sdd/features/DEFINE_FREE_TIER_PRODUCTION_DEPLOY.md`
-
-Antes do `/ship`, recomenda-se executar o deploy real seguindo `docs/DEPLOYMENT.md` (Neon → `db/migrate_to_neon.sh` → Render → Streamlit Community Cloud) para fechar AT-001, AT-002 e AT-004 com evidência de produção.
