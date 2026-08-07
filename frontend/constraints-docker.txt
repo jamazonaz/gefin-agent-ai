@@ -8,3 +8,8 @@
 # segfault (SIGSEGV / exit 139) na serializacao Arrow do st.dataframe.
 numpy==1.26.4
 pyarrow==17.0.0
+
+# pandas==2.2.3 e a versao testada e estavel junto com numpy==1.26.4 no
+# Docker local (python:3.12-slim). Sem pin, o Streamlit Community Cloud
+# (Python 3.14) resolve uma versao mais nova com wheel disponivel.
+pandas==2.2.3
