@@ -129,17 +129,37 @@ async def run_agent(user_message: str, session_id: str, domain: str = "ar") -> d
     Returns a structured dict ready for the API response.
     """
     if domain == "fabric":
-        async with fabric_mcp_tools() as mcp_tools:
-            tools = [*mcp_tools, *FABRIC_LOCAL_TOOLS, generate_chart]
-            return await _run_react_loop(
-                user_message,
-                session_id,
-                tools,
-                system_prompt=FABRIC_SYSTEM_PROMPT,
-                triage_prompt=FABRIC_TRIAGE_SYSTEM_PROMPT,
-                triage_tool=triage_fabric_scope,
-                out_of_scope_answer=FABRIC_OUT_OF_SCOPE_ANSWER,
-            )
+        start = time.time()
+        try:
+            async with fabric_mcp_tools() as mcp_tools:
+                tools = [*mcp_tools, *FABRIC_LOCAL_TOOLS, generate_chart]
+                return await _run_react_loop(
+                    user_message,
+                    session_id,
+                    tools,
+                    system_prompt=FABRIC_SYSTEM_PROMPT,
+                    triage_prompt=FABRIC_TRIAGE_SYSTEM_PROMPT,
+                    triage_tool=triage_fabric_scope,
+                    out_of_scope_answer=FABRIC_OUT_OF_SCOPE_ANSWER,
+                )
+        except Exception as e:
+            logger.exception("Failed to connect to the Fabric MCP server")
+            return {
+                "answer": (
+                    "Não consegui conectar ao servidor Fabric (MCP) agora. "
+                    "Isso costuma acontecer quando o serviço MCP remoto está fora do ar "
+                    "ou o token de autenticação (MCP_AUTH_TOKEN) não está configurado "
+                    f"corretamente no backend. Detalhe técnico: {e}"
+                ),
+                "data": None,
+                "chart_spec": None,
+                "lineage": None,
+                "final_sql": None,
+                "tools_called": [],
+                "plan": None,
+                "steps": ["mcp:connection_failed"],
+                "latency_ms": int((time.time() - start) * 1000),
+            }
 
     return await _run_react_loop(
         user_message,
