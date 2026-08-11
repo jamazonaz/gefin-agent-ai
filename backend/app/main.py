@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,6 +35,7 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=2000)
     session_id: str | None = None
+    domain: Literal["ar", "fabric"] = "ar"
 
 
 class ChatResponse(BaseModel):
@@ -62,7 +63,7 @@ async def chat(req: ChatRequest):
     session_id = req.session_id or str(uuid.uuid4())
     logger.info("Chat request session=%s msg=%s", session_id, req.message[:80])
 
-    result = await run_agent(user_message=req.message, session_id=session_id)
+    result = await run_agent(user_message=req.message, session_id=session_id, domain=req.domain)
 
     # Persist audit trail
     try:

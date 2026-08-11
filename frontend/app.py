@@ -35,10 +35,21 @@ if "session_id" not in st.session_state:
     st.session_state.session_id = None
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "domain" not in st.session_state:
+    st.session_state.domain = "ar"
+
+DOMAIN_LABELS = {
+    "ar": "Contas a Receber",
+    "fabric": "Fabric — Pipeline de Vendas",
+}
 
 
 def call_chat(message: str) -> dict[str, Any]:
-    payload = {"message": message, "session_id": st.session_state.session_id}
+    payload = {
+        "message": message,
+        "session_id": st.session_state.session_id,
+        "domain": st.session_state.domain,
+    }
     r = requests.post(f"{BACKEND_URL}/chat", json=payload, timeout=180)
     r.raise_for_status()
     return r.json()
@@ -82,6 +93,20 @@ def render_lineage(lineage: dict[str, Any] | None):
 
 # Sidebar
 with st.sidebar:
+    st.header("Assistente")
+    selected_domain = st.selectbox(
+        "Escolha o assistente",
+        options=list(DOMAIN_LABELS.keys()),
+        format_func=lambda d: DOMAIN_LABELS[d],
+        index=list(DOMAIN_LABELS.keys()).index(st.session_state.domain),
+    )
+    if selected_domain != st.session_state.domain:
+        st.session_state.domain = selected_domain
+        st.session_state.session_id = None
+        st.session_state.messages = []
+        st.rerun()
+
+    st.divider()
     st.header("Sobre")
     st.markdown(
         """
@@ -95,13 +120,19 @@ with st.sidebar:
     )
     st.divider()
     st.subheader("Exemplos de perguntas")
-    examples = [
+    ar_examples = [
         "Qual o saldo total em aberto?",
         "Mostre o aging por faixa de atraso",
         "Quais os 5 clientes com maior saldo a receber?",
         "Qual o DSO atual?",
         "Evolução do saldo em aberto nos últimos 90 dias",
     ]
+    fabric_examples = [
+        "Qual o Revenue Won total?",
+        "Como está o Win/Loss Ratio?",
+        "Qual o forecast do pipeline atual?",
+    ]
+    examples = ar_examples if st.session_state.domain == "ar" else fabric_examples
     for ex in examples:
         if st.button(ex, use_container_width=True):
             st.session_state._pending = ex

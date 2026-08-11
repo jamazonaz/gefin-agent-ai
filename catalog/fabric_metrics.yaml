@@ -1,0 +1,297 @@
+# GEFIN Agent - Catálogo Semântico do domínio Fabric (Pipeline de Vendas)
+# O agente DEVE consultar este catálogo antes de gerar qualquer consulta DAX.
+# Medidas e tabelas marcadas como internas/ocultas no modelo semântico não são expostas aqui.
+
+version: "1.0"
+domain: sales_pipeline_fabric
+
+measures:
+  - id: revenue_won
+    name: "Revenue Won"
+    description: "Receita total das oportunidades efetivamente ganhas (fechadas com sucesso). É o principal indicador de resultado comercial realizado."
+    table: Opportunities
+    dax_reference: "Opportunities[Revenue Won]"
+    data_type: Integer
+    examples:
+      - "Qual o Revenue Won total?"
+      - "Quanto de receita foi ganha neste período?"
+      - "Receita ganha por território"
+
+  - id: revenue_in_pipeline
+    name: "Revenue In Pipeline"
+    description: "Receita potencial das oportunidades que ainda estão em andamento no funil, ou seja, sem desfecho de ganho ou perda."
+    table: Opportunities
+    dax_reference: "Opportunities[Revenue In Pipeline]"
+    data_type: Number
+    examples:
+      - "Quanto temos de receita no pipeline?"
+      - "Qual o valor do funil de vendas hoje?"
+      - "Receita em pipeline por indústria"
+
+  - id: revenue_open
+    name: "Revenue Open"
+    description: "Receita associada às oportunidades em aberto, isto é, ainda não encerradas. Usada para dimensionar o volume comercial disponível."
+    table: Opportunities
+    dax_reference: "Opportunities[Revenue Open]"
+    data_type: Number
+    examples:
+      - "Qual o Revenue Open atual?"
+      - "Quanto há de receita em oportunidades ainda abertas?"
+
+  - id: forecast
+    name: "Forecast"
+    description: "Previsão de receita esperada para o período, calculada a partir das oportunidades do pipeline e de sua probabilidade de fechamento."
+    table: Opportunities
+    dax_reference: "Opportunities[Forecast]"
+    data_type: Number
+    examples:
+      - "Qual o forecast de receita?"
+      - "Qual a previsão de vendas para este trimestre?"
+      - "Forecast por proprietário"
+
+  - id: forecast_pct
+    name: "Forecast %"
+    description: "Percentual de atingimento da previsão, comparando o forecast com a meta ou com o valor de referência do período."
+    table: Opportunities
+    dax_reference: "Opportunities[Forecast %]"
+    data_type: Number
+    examples:
+      - "Qual o percentual de forecast?"
+      - "Estamos atingindo quanto por cento da previsão?"
+
+  - id: forecast_by_win_loss_ratio
+    name: "Forecast by Win/Loss Ratio"
+    description: "Previsão de receita ajustada pela razão histórica entre oportunidades ganhas e perdidas. Oferece uma projeção mais conservadora que o forecast padrão."
+    table: Opportunities
+    dax_reference: "Opportunities[Forecast by Win/Loss Ratio]"
+    data_type: Number
+    examples:
+      - "Qual o forecast ajustado pela razão de ganho e perda?"
+      - "Previsão considerando o histórico de win/loss"
+
+  - id: opportunity_count
+    name: "Opportunity Count"
+    description: "Quantidade total de oportunidades registradas, independentemente do estágio ou desfecho."
+    table: Opportunities
+    dax_reference: "Opportunities[Opportunity Count]"
+    data_type: Integer
+    examples:
+      - "Quantas oportunidades existem no total?"
+      - "Número de oportunidades por região"
+
+  - id: opportunity_count_in_pipeline
+    name: "Opportunity Count In Pipeline"
+    description: "Quantidade de oportunidades que continuam ativas no funil, sem ganho ou perda declarados."
+    table: Opportunities
+    dax_reference: "Opportunities[Opportunity Count In Pipeline]"
+    data_type: Integer
+    examples:
+      - "Quantas oportunidades estão no pipeline?"
+      - "Número de negócios em andamento"
+
+  - id: count_of_won
+    name: "Count of Won"
+    description: "Quantidade de oportunidades fechadas como ganhas."
+    table: Opportunities
+    dax_reference: "Opportunities[Count of Won]"
+    data_type: Integer
+    examples:
+      - "Quantas oportunidades foram ganhas?"
+      - "Número de negócios fechados com sucesso por vendedor"
+
+  - id: count_of_lost
+    name: "Count of Lost"
+    description: "Quantidade de oportunidades fechadas como perdidas."
+    table: Opportunities
+    dax_reference: "Opportunities[Count of Lost]"
+    data_type: Integer
+    examples:
+      - "Quantas oportunidades foram perdidas?"
+      - "Número de negócios perdidos por indústria"
+
+  - id: close_rate
+    name: "Close %"
+    description: "Taxa de fechamento: percentual de oportunidades ganhas em relação ao total de oportunidades encerradas. Mede a eficácia comercial."
+    table: Opportunities
+    dax_reference: "Opportunities[Close %]"
+    data_type: Number
+    examples:
+      - "Qual a taxa de fechamento?"
+      - "Qual o Close % por território?"
+      - "Percentual de conversão de oportunidades"
+
+  - id: revenue_won_avg_deal_size
+    name: "Revenue Won Average Deal Size"
+    description: "Ticket médio das oportunidades ganhas, ou seja, a receita ganha dividida pela quantidade de negócios fechados com sucesso."
+    table: Opportunities
+    dax_reference: "Opportunities[Revenue Won Average Deal Size]"
+    data_type: Number
+    examples:
+      - "Qual o ticket médio dos negócios ganhos?"
+      - "Average deal size por produto"
+
+  - id: rev_goal
+    name: "Rev Goal"
+    description: "Meta de receita definida para cada proprietário (vendedor ou responsável comercial). Serve de referência para comparar o realizado e a previsão."
+    table: Owners
+    dax_reference: "Owners[Rev Goal]"
+    data_type: Integer
+    examples:
+      - "Qual a meta de receita por vendedor?"
+      - "Compare o Revenue Won com o Rev Goal"
+
+tables:
+  - name: Opportunities
+    hidden: false
+    description: "Tabela fato central do pipeline de vendas. Contém as oportunidades comerciais e concentra a maior parte das medidas do modelo."
+
+  - name: Accounts
+    hidden: false
+    description: "Dimensão de contas/empresas clientes associadas às oportunidades."
+
+  - name: Contacts
+    hidden: false
+    description: "Dimensão de contatos (pessoas) vinculados às contas e às oportunidades."
+
+  - name: Owners
+    hidden: false
+    description: "Dimensão de proprietários das oportunidades (vendedores e responsáveis comerciais). Contém a medida de meta de receita."
+
+  - name: Products
+    hidden: false
+    description: "Dimensão de produtos ofertados nas oportunidades."
+
+  - name: Industries
+    hidden: false
+    description: "Dimensão de setores de atuação (indústrias) das contas, usada para análises de mercado."
+
+  - name: Territories
+    hidden: false
+    description: "Dimensão geográfica de territórios de vendas, usada para análises por região."
+
+  - name: Campaigns
+    hidden: false
+    description: "Dimensão de campanhas de marketing que originaram ou influenciaram as oportunidades."
+
+  - name: Opportunity Calendar
+    hidden: false
+    description: "Dimensão de calendário das oportunidades, usada para análises temporais e de tendência."
+
+# ATENÇÃO: o mapeamento related_measures abaixo é aproximado (heurístico), derivado do nome
+# de cada página e de convenções típicas de relatórios de CRM/pipeline. O servidor MCP não
+# expõe o vínculo real entre visuais e medidas, portanto isto NÃO é um binding garantido.
+report_pages:
+  - name: "Sales Overview"
+    visuals:
+      kpi: 4
+      lineStackedColumnComboChart: 1
+      barChart: 1
+      columnChart: 1
+      pivotTable: 2
+      shapeMap: 1
+      funnel: 1
+      slicer: 1
+    related_measures:
+      - revenue_won
+      - revenue_in_pipeline
+      - revenue_open
+      - forecast
+      - opportunity_count
+      - count_of_won
+      - rev_goal
+
+  - name: "Win/Loss Ratio Overview"
+    visuals:
+      kpi: 4
+      lineChart: 1
+      FlowVisual: 1
+      pivotTable: 1
+      clusteredColumnChart: 1
+      barChart: 1
+      tableEx: 1
+    related_measures:
+      - close_rate
+      - count_of_won
+      - count_of_lost
+      - opportunity_count
+      - revenue_won
+
+  - name: "Industries Overview"
+    visuals:
+      tableEx: 1
+      lineChart: 1
+      pivotTable: 2
+      scatterChart: 1
+    related_measures:
+      - revenue_won
+      - revenue_in_pipeline
+      - opportunity_count
+      - close_rate
+      - revenue_won_avg_deal_size
+
+  - name: "Pipeline Trends"
+    visuals:
+      tableEx: 1
+      kpi: 4
+      ribbonChart: 1
+      barChart: 1
+    related_measures:
+      - revenue_in_pipeline
+      - revenue_open
+      - opportunity_count_in_pipeline
+      - forecast
+      - forecast_pct
+
+  - name: "Trend Analytics"
+    visuals:
+      kpi: 4
+      lineChart: 4
+    related_measures:
+      - revenue_won
+      - revenue_in_pipeline
+      - forecast
+      - opportunity_count
+
+  - name: "Win/Loss Ratio Insights"
+    visuals:
+      lineStackedColumnComboChart: 1
+      barChart: 1
+      keyDriversVisual: 1
+    related_measures:
+      - close_rate
+      - count_of_won
+      - count_of_lost
+      - forecast_by_win_loss_ratio
+
+  - name: "Days to Close Insights"
+    visuals:
+      barChart: 2
+      keyDriversVisual: 1
+    related_measures: []
+    note: "Sem medida direta mapeada: a página analisa tempo de fechamento, que não corresponde a nenhuma das medidas expostas neste catálogo."
+
+  - name: "Sales Discounting Insights"
+    visuals:
+      barChart: 2
+      keyDriversVisual: 1
+    related_measures:
+      - revenue_won
+      - revenue_won_avg_deal_size
+
+  - name: "Revenue Source Breakdown"
+    visuals:
+      barChart: 2
+      decompositionTreeVisual: 1
+    related_measures:
+      - revenue_won
+
+  - name: "Q&A Query"
+    visuals:
+      qnaVisual: 1
+    related_measures: []
+    note: "Página de perguntas e respostas em linguagem natural; não possui medidas fixas associadas."
+
+  - name: "Template"
+    visuals: {}
+    related_measures: []
+    note: "Página modelo, sem visuais publicados."
