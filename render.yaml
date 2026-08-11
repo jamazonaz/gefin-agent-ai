@@ -16,11 +16,19 @@ services:
         value: production
       - key: CATALOG_PATH
         value: /app/catalog/metrics.yaml
+      - key: FABRIC_CATALOG_PATH
+        value: /app/catalog/fabric_metrics.yaml
+      - key: MCP_SERVER_URL
+        value: https://mcp-fabric-dck4.onrender.com/mcp
+      - key: MCP_AUTH_TOKEN
+        sync: false
+      - key: MCP_TIMEOUT_SECONDS
+        value: "60"
       - key: LLM_PROVIDER
-        value: anthropic
+        value: openai
       - key: LLM_MODEL
-        value: claude-sonnet-4-20250514
-      - key: ANTHROPIC_API_KEY
+        value: gpt-4o-mini
+      - key: OPENAI_API_KEY
         sync: false
       - key: LOG_LEVEL
         value: INFO

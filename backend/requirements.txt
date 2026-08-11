@@ -2,11 +2,13 @@ fastapi==0.115.6
 uvicorn[standard]==0.34.0
 langgraph==0.2.60
 langchain==0.3.14
-langchain-core==0.3.29
+langchain-core==0.3.63
 langchain-community==0.3.14
 langchain-ollama==0.2.2
 langchain-openai==0.2.14
 langchain-anthropic==0.3.1
+langchain-mcp-adapters==0.1.14
+mcp>=1.9.2,<2.0.0
 psycopg2-binary==2.9.10
 sqlalchemy==2.0.36
 pydantic==2.10.4
@@ -16,3 +18,4 @@ sqlglot==26.0.0
 httpx==0.28.1
 python-dotenv==1.0.1
 tenacity==9.0.0
+pytest==8.3.4
