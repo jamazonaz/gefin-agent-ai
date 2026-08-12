@@ -100,10 +100,10 @@ Views: `vw_ar_open_items`, `vw_ar_aging`, `vw_ar_customer_summary`, `vw_ar_kpi_d
 
 ## 5. Interface Requirements
 
-- Chat web (Streamlit)
+- Chat web (Chainlit, montado no FastAPI) com login único e resposta em streaming
 - Texto + tabelas + gráficos Plotly + bloco de linhagem
 - Histórico de sessão
-- Exemplos de perguntas na sidebar
+- Perguntas-exemplo por assistente (starters)
 
 ---
 

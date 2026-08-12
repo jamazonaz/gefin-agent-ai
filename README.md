@@ -22,7 +22,7 @@ Não é um simples text-to-SQL. É um **agente** com tools, planejamento e refle
 ## Arquitetura (resumo)
 
 ```
-Usuário → Streamlit Chat → FastAPI + Agent (ReAct loop)
+Usuário → Chainlit UI (login + chat, montado no FastAPI) → Agent (ReAct loop)
                               ├── Tools (catalog, execute_sql, chart, lineage…)
                               ├── PostgreSQL (views semânticas)
                               └── Claude / OpenAI / Ollama (LLM)
@@ -58,6 +58,20 @@ LLM_MODEL=claude-sonnet-4-20250514
 ANTHROPIC_API_KEY=sk-ant-api03-sua-chave-aqui
 ```
 
+Gere o segredo de sessão do chat e defina o login único (usado pelo Chainlit):
+
+```bash
+pip install chainlit  # só para gerar o segredo, uma vez
+chainlit create-secret
+```
+
+```bash
+# No .env:
+CHAINLIT_AUTH_SECRET=<valor gerado acima>
+APP_USERNAME=gefin
+APP_PASSWORD=escolha-uma-senha
+```
+
 Suba os serviços (Ollama **não** sobe por padrão):
 
 ```bash
@@ -77,11 +91,11 @@ docker compose exec ollama ollama pull qwen2.5:14b
 
 ### URLs
 
-| Serviço   | URL                        |
-|-----------|----------------------------|
-| Chat UI   | http://localhost:8501      |
-| API docs  | http://localhost:8000/docs |
-| Adminer   | http://localhost:8080      |
+| Serviço   | URL                          |
+|-----------|-------------------------------|
+| Chat UI   | http://localhost:8000/chainlit |
+| API docs  | http://localhost:8000/docs   |
+| Adminer   | http://localhost:8080        |
 
 Adminer: sistema `PostgreSQL`, servidor `db`, usuário/senha/db `gefin`.
 
@@ -101,7 +115,7 @@ Adminer: sistema `PostgreSQL`, servidor `db`, usuário/senha/db `gefin`.
 
 | Camada        | Tecnologia                          |
 |---------------|-------------------------------------|
-| Frontend      | Streamlit + Plotly                  |
+| Chat UI       | Chainlit + Plotly (montado no FastAPI) |
 | Backend       | FastAPI + LangChain tools (ReAct)   |
 | LLM           | Claude (Anthropic) / OpenAI / Ollama |
 | Banco         | PostgreSQL 16 + views semânticas    |
@@ -118,8 +132,7 @@ gefin-agent/
 ├── .env.example
 ├── catalog/metrics.yaml          # catálogo semântico
 ├── db/init/                      # schema + sample data + views
-├── backend/                      # FastAPI + agent
-├── frontend/                     # Streamlit chat
+├── backend/                      # FastAPI + agent + Chainlit (chat UI)
 └── docs/                         # arquitetura e requisitos
 ```
 
@@ -137,7 +150,7 @@ gefin-agent/
 
 ## Desenvolvimento local (sem rebuild)
 
-Os volumes montam o código. Basta editar e o `--reload` do uvicorn / Streamlit recarrega.
+Os volumes montam o código. Basta editar e o `--reload` do uvicorn recarrega (inclui a UI do Chainlit, montada no mesmo processo).
 
 Para testar só o backend:
 
