@@ -12,3 +12,4 @@ pgdata/
 ollama_data/
 .streamlit/secrets.toml
 .claude/settings.local.json
+.chainlit/

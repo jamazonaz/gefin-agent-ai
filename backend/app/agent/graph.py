@@ -19,6 +19,7 @@ import time
 from typing import Any
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 
 from app.agent.fabric_mcp import fabric_mcp_tools
@@ -123,7 +124,12 @@ def _extract_final_answer(messages: list) -> str:
     return "Não consegui formular uma resposta completa."
 
 
-async def run_agent(user_message: str, session_id: str, domain: str = "ar") -> dict[str, Any]:
+async def run_agent(
+    user_message: str,
+    session_id: str,
+    domain: str = "ar",
+    config: RunnableConfig | None = None,
+) -> dict[str, Any]:
     """
     Run a bounded ReAct loop for the requested domain.
     Returns a structured dict ready for the API response.
@@ -141,6 +147,7 @@ async def run_agent(user_message: str, session_id: str, domain: str = "ar") -> d
                     triage_prompt=FABRIC_TRIAGE_SYSTEM_PROMPT,
                     triage_tool=triage_fabric_scope,
                     out_of_scope_answer=FABRIC_OUT_OF_SCOPE_ANSWER,
+                    config=config,
                 )
         except Exception as e:
             logger.exception("Failed to connect to the Fabric MCP server")
@@ -169,6 +176,7 @@ async def run_agent(user_message: str, session_id: str, domain: str = "ar") -> d
         triage_prompt=TRIAGE_SYSTEM_PROMPT,
         triage_tool=triage_scope,
         out_of_scope_answer=OUT_OF_SCOPE_ANSWER,
+        config=config,
     )
 
 
@@ -181,6 +189,7 @@ async def _run_react_loop(
     triage_prompt: str,
     triage_tool: BaseTool,
     out_of_scope_answer: str,
+    config: RunnableConfig | None = None,
 ) -> dict[str, Any]:
     """
     Run a bounded ReAct loop with the given prompts and tool set.
@@ -200,7 +209,7 @@ async def _run_react_loop(
 
         try:
             triage_llm = llm.bind_tools([triage_tool], tool_choice=triage_tool.name)
-            triage_response: AIMessage = await triage_llm.ainvoke(triage_messages)
+            triage_response: AIMessage = await triage_llm.ainvoke(triage_messages, config=config)
             if triage_response.tool_calls:
                 triage_args = triage_response.tool_calls[0]["args"]
                 if not triage_args.get("in_scope", True):
@@ -248,7 +257,7 @@ async def _run_react_loop(
     for step in range(MAX_STEPS):
         steps.append(f"step_{step + 1}")
         try:
-            response: AIMessage = await llm_with_tools.ainvoke(messages)
+            response: AIMessage = await llm_with_tools.ainvoke(messages, config=config)
         except Exception as e:
             logger.exception("LLM call failed")
             hint = ""

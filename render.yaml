@@ -38,3 +38,9 @@ services:
         value: "500"
       - key: SQL_TIMEOUT_SECONDS
         value: "30"
+      - key: CHAINLIT_AUTH_SECRET
+        sync: false
+      - key: APP_USERNAME
+        sync: false
+      - key: APP_PASSWORD
+        sync: false

@@ -39,15 +39,13 @@ C4Container
     Person(user, "Usuário")
 
     Container_Boundary(gefin_boundary, "GEFIN Agent") {
-        Container(frontend, "Frontend", "Streamlit + Plotly", "Chat UI + gráficos + linhagem")
-        Container(api, "Agent API", "FastAPI + LangChain tools", "Orquestração ReAct, tools, memória de sessão")
+        Container(api, "Backend + Chat UI", "FastAPI + Chainlit + LangChain tools", "Orquestração ReAct, tools, memória de sessão, UI de chat montada no mesmo processo (/chainlit)")
         Container(catalog, "Catalog", "YAML montado no backend", "Métricas, definições, exemplos")
         ContainerDb(db, "PostgreSQL 16", "Dados + views semânticas + audit_log")
         Container_Ext(llm, "LLM Provider", "Claude (padrão) / OpenAI / Ollama")
     }
 
-    Rel(user, frontend, "http://localhost:8501")
-    Rel(frontend, api, "REST /chat")
+    Rel(user, api, "http://localhost:8000/chainlit (login + chat)")
     Rel(api, catalog, "list_metrics, get_metric_definition")
     Rel(api, db, "execute_sql (whitelisted views only)")
     Rel(api, llm, "Chat + tool calling")
@@ -63,17 +61,18 @@ C4Container
 ```mermaid
 sequenceDiagram
     participant U as Usuário
-    participant FE as Frontend (Streamlit)
-    participant AG as Agent (FastAPI + ReAct)
+    participant CL as Chainlit UI (mesmo processo)
+    participant AG as Agent (agent/graph.py, ReAct)
     participant CAT as Catálogo YAML
     participant DB as PostgreSQL
     participant LLM as Claude / OpenAI / Ollama
 
-    U->>FE: Pergunta em linguagem natural
-    FE->>AG: POST /chat (session_id + message)
+    U->>CL: Login (usuário/senha único)
+    U->>CL: Pergunta em linguagem natural (ou starter)
+    CL->>AG: run_agent(msg, session_id, domain, config=callbacks) — chamada direta, sem HTTP
 
     AG->>LLM: Planeja (system prompt + histórico + tools)
-    LLM-->>AG: Plano + tool calls
+    LLM-->>CL: Tokens da resposta (streaming via cl.LangchainCallbackHandler)
 
     loop Até ter dados suficientes ou max steps (6)
         alt Precisa de definição de métrica
@@ -90,9 +89,9 @@ sequenceDiagram
     end
 
     AG->>AG: get_lineage (ou fallback automático)
-    AG->>DB: INSERT audit_log
-    AG-->>FE: Resposta + data + chart_spec + lineage
-    FE-->>U: Texto + tabela + gráfico + origem do dado
+    AG-->>CL: Resposta + data + chart_spec + lineage + steps
+    CL->>DB: INSERT audit_log (write_audit, chamado pelo handler)
+    CL-->>U: Texto (streamed) + tabela + gráfico + linhagem + steps do agente
 ```
 
 ---
@@ -171,7 +170,7 @@ O agente **deve** consultar o catálogo antes de gerar SQL complexo.
 | Agente              | Python 3.12 + FastAPI + LangChain tools (ReAct) |
 | LLM (padrão)        | **Anthropic Claude** (`langchain-anthropic`)    |
 | LLM (alternativas)  | OpenAI / Ollama                                 |
-| Frontend            | Streamlit + Plotly                              |
+| Chat UI             | Chainlit (montado no FastAPI) + Plotly          |
 | Catálogo            | YAML + Pydantic-style loader                    |
 | Validação SQL       | sqlglot + whitelist de views                    |
 | Observabilidade     | Logs estruturados + tabela `audit_log`          |
@@ -203,8 +202,10 @@ gefin-agent/
 ├── backend/
 │   ├── Dockerfile
 │   ├── requirements.txt
+│   ├── chainlit.md            # tela de boas-vindas do Chainlit
 │   └── app/
-│       ├── main.py
+│       ├── main.py            # monta o Chainlit + /health + /catalog
+│       ├── chainlit_app.py    # UI de chat (auth, streaming, elementos)
 │       ├── agent/
 │       │   ├── graph.py      # loop ReAct
 │       │   ├── tools.py      # 6 tools + guardrails
@@ -213,9 +214,6 @@ gefin-agent/
 │       ├── catalog/loader.py
 │       ├── db/connection.py
 │       └── audit/logger.py
-├── frontend/
-│   ├── Dockerfile
-│   └── app.py
 └── docs/
     ├── ARCHITECTURE.md
     ├── REQUIREMENTS.md

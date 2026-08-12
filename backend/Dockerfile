@@ -11,6 +11,7 @@ COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/app ./app
+COPY backend/chainlit.md .
 COPY catalog ./catalog
 
 ENV PYTHONPATH=/app
